@@ -1,25 +1,118 @@
-const express = require('express')
-const logger = require('morgan')
-const cors = require('cors')
+const express = require("express");
+const morgan = require("morgan");
+const cors = require("cors");
+const bodyParser = require("body-parser");
+const { v4: uuidv4 } = require("uuid");
+const {
+  validateContact,
+  listContacts,
+  getById,
+  addContact,
+  removeContact,
+  updateContact,
+} = require("./contacts");
 
-const contactsRouter = require('./routes/api/contacts')
+const app = express();
 
-const app = express()
+app.use(morgan("dev"));
+app.use(cors());
+app.use(bodyParser.json());
 
-const formatsLogger = app.get('env') === 'development' ? 'dev' : 'short'
+app.get("/api/contacts", async (req, res, next) => {
+  try {
+    const contacts = await listContacts();
+    res.json(contacts);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
 
-app.use(logger(formatsLogger))
-app.use(cors())
-app.use(express.json())
+app.get("/api/contacts/:id", async (req, res, next) => {
+  const { id } = req.params;
+  try {
+    const contact = await getById(id);
+    if (contact) {
+      res.json(contact);
+    } else {
+      res.status(404).json({ message: "Not found" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
 
-app.use('/api/contacts', contactsRouter)
+app.post("/api/contacts", async (req, res, next) => {
+  const { name, email, phone } = req.body;
 
-app.use((req, res) => {
-  res.status(404).json({ message: 'Not found' })
-})
+  const { error } = validateContact(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
 
-app.use((err, req, res, next) => {
-  res.status(500).json({ message: err.message })
-})
+  const newContact = {
+    id: uuidv4(),
+    name,
+    email,
+    phone,
+  };
 
-module.exports = app
+  try {
+    await addContact(newContact);
+    res.status(201).json(newContact);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+app.delete("/api/contacts/:id", async (req, res, next) => {
+  const { id } = req.params;
+  try {
+    const result = await removeContact(id);
+    if (result) {
+      res.json({ message: "Contact deleted" });
+    } else {
+      res.status(404).json({ message: "Not found" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+app.put("/api/contacts/:id", async (req, res, next) => {
+  const { id } = req.params;
+  const { name, email, phone } = req.body;
+
+  const { error } = validateContact(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
+  const updatedContact = {
+    id,
+    name: name || undefined,
+    email: email || undefined,
+    phone: phone || undefined,
+  };
+
+  try {
+    const result = await updateContact(id, updatedContact);
+    if (result) {
+      res.json(updatedContact);
+    } else {
+      res.status(404).json({ message: "Not found" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
