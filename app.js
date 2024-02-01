@@ -2,14 +2,13 @@ const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 const bodyParser = require("body-parser");
-const { v4: uuidv4 } = require("uuid");
 const {
-  validateContact,
   listContacts,
   getById,
   addContact,
   removeContact,
   updateContact,
+  validateContact,
 } = require("./contacts");
 
 const app = express();
@@ -52,7 +51,6 @@ app.post("/api/contacts", async (req, res, next) => {
   }
 
   const newContact = {
-    id: uuidv4(),
     name,
     email,
     phone,
@@ -92,10 +90,9 @@ app.put("/api/contacts/:id", async (req, res, next) => {
   }
 
   const updatedContact = {
-    id,
-    name: name || undefined,
-    email: email || undefined,
-    phone: phone || undefined,
+    name: name && name.trim(),
+    email: email && email.trim(),
+    phone: phone && phone.trim(),
   };
 
   try {
