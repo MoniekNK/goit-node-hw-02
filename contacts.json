@@ -1,0 +1,26 @@
+[
+  {
+    "id": "ec29390e-e0da-4956-a911-3fdfd18b9937",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "123-456-7890"
+  },
+  {
+    "id": "702d6d2c-9659-4f03-8929-3826589517e9",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "123-456-7890"
+  },
+  {
+    "id": "9a30d7af-d9c3-4f8b-a1e5-9aba38da3678",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "123-456-7890"
+  },
+  {
+    "id": "f55ec1a4-9f8f-4b99-a2d6-81e4c9750122",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "123-456-7890"
+  }
+]
