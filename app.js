@@ -31,7 +31,8 @@ app.post("/api/contacts", async (req, res) => {
   }
 });
 
-app.delete("/api/contacts/:id", async (req, res) => {
+// Poprawiona kolejność definicji controllerDelete
+const controllerDelete = async (req, res) => {
   const { id } = req.params;
   try {
     const result = await removeContact(id);
@@ -41,7 +42,9 @@ app.delete("/api/contacts/:id", async (req, res) => {
     console.error(error);
     res.status(500).json({ message: "Internal Server Error" });
   }
-});
+};
+
+app.delete("/api/contacts/:id", controllerDelete);
 
 app.put("/api/contacts/:id", async (req, res) => {
   const { id } = req.params;

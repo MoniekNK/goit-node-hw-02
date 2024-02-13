@@ -1,4 +1,7 @@
-const { updateContact, getById } = require("../../../contacts");
+const {
+  updateContact,
+  getContactById,
+} = require("../../../controllers/contacts");
 
 const updateFavoriteStatus = async (req, res) => {
   const { contactId } = req.params;
@@ -9,7 +12,7 @@ const updateFavoriteStatus = async (req, res) => {
   }
 
   try {
-    const existingContact = await getById(contactId);
+    const existingContact = await getContactById(contactId);
     if (!existingContact) {
       return res.status(404).json({ message: "Not found" });
     }
