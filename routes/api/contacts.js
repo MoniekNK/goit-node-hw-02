@@ -1,69 +1,144 @@
-const Contact = require("../../models/contact");
-
-const listContacts = async (req, res) => {
-  try {
-    const contacts = await Contact.find();
-    res.json(contacts);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
-
-const getContactById = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const contact = await Contact.findById(id);
-    if (!contact) return res.status(404).json({ message: "Contact not found" });
-    res.json(contact);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
-
-const removeContact = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const deletedContact = await Contact.findByIdAndRemove(id);
-    if (!deletedContact)
-      return res.status(404).json({ message: "Contact not found" });
-    res.json({ message: "Contact deleted" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
-
-const addContact = async (req, res) => {
-  try {
-    const newContact = await Contact.create(req.body);
-    res.status(201).json(newContact);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
-
-const updateContact = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const updatedContact = await Contact.findByIdAndUpdate(id, req.body, {
-      new: true,
-    });
-    if (!updatedContact)
-      return res.status(404).json({ message: "Contact not found" });
-    res.json(updatedContact);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
-
-module.exports = {
+const express = require("express");
+const {
   listContacts,
   getContactById,
-  removeContact,
   addContact,
+  removeContact,
   updateContact,
-};
+  updateStatusContact,
+} = require("../../service/contactsService");
+const {
+  addContactSchema,
+  updateContactSchema,
+  updateContactStatusSchema,
+} = require("../../validation/Joi");
+
+const router = express.Router();
+
+router.get("/", async (req, res, next) => {
+  try {
+    const ownerId = req.user._id;
+    const contacts = await listContacts(ownerId);
+    res.status(200).json(contacts);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/:contactId", async (req, res, next) => {
+  try {
+    const { contactId } = req.params;
+    const ownerId = req.user._id;
+    const contactToFind = await getContactById(contactId, ownerId);
+    if (contactToFind) {
+      res.status(200).json(contactToFind);
+    } else {
+      res
+        .status(404)
+        .json({ message: `Contact with id ${contactId} not found` });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/", async (req, res, next) => {
+  try {
+    const { name, email, phone, favorite } = req.body;
+    const ownerId = req.user._id;
+    if (!name || !email || !phone) {
+      return res.status(400).json({ message: "Missing required field(s)" });
+    }
+
+    const dataToAdd = addContactSchema.validate({ name, email, phone });
+    if (dataToAdd.error) {
+      return res
+        .status(400)
+        .json({ message: dataToAdd.error.details[0].message });
+    }
+    const newContact = await addContact(
+      { name, email, phone, favorite },
+      ownerId
+    );
+    res.status(201).json(newContact);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/:contactId", async (req, res, next) => {
+  try {
+    const { contactId } = req.params;
+    const ownerId = req.user._id;
+    const contactToRemove = await removeContact(contactId, ownerId);
+    if (contactToRemove) {
+      res.status(200).json({ message: `contact with id ${contactId} deleted` });
+    } else {
+      res
+        .status(404)
+        .json({ message: `Contact with id ${contactId} not found` });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.put("/:contactId", async (req, res, next) => {
+  try {
+    const { contactId } = req.params;
+    const body = req.body;
+
+    if (!body) {
+      return res.status(400).json({ message: "Missing fields" });
+    }
+    const dataToUpdate = updateContactSchema.validate(body);
+    if (dataToUpdate.error) {
+      return res
+        .status(400)
+        .json({ message: dataToUpdate.error.details[0].message });
+    } else {
+      const ownerId = req.user._id;
+      const updatedContact = await updateContact(contactId, body, ownerId);
+
+      if (!updatedContact) {
+        return res.status(404).json({ message: "Not found" });
+      }
+      res.status(200).json(updatedContact);
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/:contactId/favorite", async (req, res, next) => {
+  try {
+    const { contactId } = req.params;
+    const { favorite } = req.body;
+
+    if (favorite === undefined || favorite === null) {
+      return res.status(400).json({ message: "missing field favorite" });
+    }
+    const dataToUpdate = updateContactStatusSchema.validate({ favorite });
+    if (dataToUpdate.error) {
+      return res
+        .status(400)
+        .json({ message: dataToUpdate.error.details[0].message });
+    } else {
+      const ownerId = req.user._id;
+      const updatedContact = await updateStatusContact(
+        contactId,
+        { favorite },
+        ownerId
+      );
+
+      if (!updatedContact) {
+        return res.status(404).json({ message: "Not found" });
+      }
+      res.status(200).json(updatedContact);
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+module.exports = router;
